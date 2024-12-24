@@ -73,7 +73,8 @@ class Post(PublishedModel):
         verbose_name='Автор публикации',
         related_name='posts'
     )
-    location = models.ForeignKey(
+    location = models.ForeignKey( #1.2 В моделях у всех полей для связи между таблицами с типом ForeignKey должны быть заданы параметры on_delete. 
+                                  #Для большинства — со значением CASCADE, для локации и категории — SET_NULL.
         Location,
         on_delete=models.SET_NULL,
         verbose_name='Местоположение',
