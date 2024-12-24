@@ -8,7 +8,7 @@ from .models import Post, Category, Comment, User
 from .forms import PostForm, ProfileEditForm, CommentForm
 
 
-def get_posts(post_objects):
+def get_posts(post_objects): #2.3 Функции фильтрации по опубликованным и дополнения числа комментариев объединены; 2.4 Функция get_posts принимает post_objects как параметр
     """Посты из БД."""
     return post_objects.filter( #1.13 Фильтрация записей по опубликованности
         pub_date__lte=timezone.now(),
@@ -27,7 +27,7 @@ def get_paginator(request, items, num=10): #1.11 Функция обрабаты
 def index(request):
     """Главная страница."""
     template = 'blog/index.html'
-    post_list = get_posts(Post.objects).order_by('-pub_date') #1.10 Сортировка после annotate
+    post_list = get_posts(Post.objects).order_by('-pub_date') #1.10 Сортировка после annotate; 2.6 Извлечение связанных объектов через поле связи вместо явных фильтров
     page_obj = get_paginator(request, post_list)
     context = {'page_obj': page_obj}
     return render(request, template, context)
@@ -36,10 +36,10 @@ def index(request):
 def post_detail(request, post_id): #1.16 Проверка автора поста
     """Полное описание выбранной записи."""
     template = 'blog/detail.html'
-    posts = get_object_or_404(Post, id=post_id) #Пост извлекается без фильтрации
+    posts = get_object_or_404(Post, id=post_id) #Пост извлекается из полной таблицы без фильтрации
     if request.user != posts.author: #Если пользователь не автор, выполняется повторное извлечение из опубликованных постов
-        posts = get_object_or_404(get_posts(Post.objects), id=post_id)
-    comments = posts.comments.order_by('created_at')
+        posts = get_object_or_404(get_posts(Post.objects), id=post_id) #2.5 Для отказа в показе неопубликованного поста в post_detail используется два вызова get_object_or_404
+    comments = posts.comments.order_by('created_at') #2.6 Извлечение связанных объектов через поле связи вместо явных фильтров
     form = CommentForm()
     context = {'post': posts, 'form': form, 'comments': comments}
     return render(request, template, context)
@@ -50,7 +50,7 @@ def category_posts(request, category_slug):
     template = 'blog/category.html'
     category = get_object_or_404(
         Category, slug=category_slug, is_published=True)
-    post_list = get_posts(category.posts).order_by('-pub_date')
+    post_list = get_posts(category.posts).order_by('-pub_date') #2.7 -
     page_obj = get_paginator(request, post_list)
     context = {'category': category, 'page_obj': page_obj}
     return render(request, template, context)
@@ -61,7 +61,7 @@ def create_post(request):
     """Создает новую запись."""
     template = 'blog/create.html'
     if request.method == 'POST':
-        form = PostForm(request.POST or None, files=request.FILES or None)
+        form = PostForm(request.POST or None, files=request.FILES or None) #2.8 В обработчиках, создающих или редактирующих посты, используется общая обработка GET и POST запросов через form
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
@@ -111,7 +111,7 @@ def edit_post(request, post_id):
         return redirect('blog:post_detail', post_id) #1.6
     if request.method == "POST":
         form = PostForm(
-            request.POST, files=request.FILES or None, instance=post)
+            request.POST, files=request.FILES or None, instance=post) #2.8
         if form.is_valid():
             post.save()
             return redirect('blog:post_detail', post_id)
